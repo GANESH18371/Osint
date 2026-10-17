@@ -1,0 +1,6 @@
+{
+  "name": "BeaconLens",
+  "description": "Architectural blueprint and scanner for public BLE/Wi-Fi beacon detection, image OSINT inspection, TTS voice alerts, and FastAPI backend integration.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
