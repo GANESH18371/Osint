@@ -655,6 +655,24 @@ jobs:
       - name: Grant Execute Permission to Gradle Wrapper
         run: chmod +x gradlew
 
+      # Generate debug.keystore in repository root if it does not exist
+      - name: Generate Debug Keystore
+        run: |
+          if [ ! -f debug.keystore ]; then
+            echo "Generating debug.keystore for CI signing..."
+            keytool -genkeypair -v \
+              -keystore debug.keystore \
+              -alias androiddebugkey \
+              -keypass android \
+              -storepass android \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          else
+            echo "debug.keystore already exists, skipping generation."
+          fi
+
       # Execute local JVM unit tests
       - name: Run Unit Tests
         run: ./gradlew testDebugUnitTest --stacktrace
