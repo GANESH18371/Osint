@@ -23,18 +23,24 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
+      # Validates official Gradle Wrapper checksums to prevent supply chain tampering.
+      # IMPORTANT: Ensure 'gradle/wrapper/gradle-wrapper.jar' is committed to git (use 'git add -f gradle/wrapper/gradle-wrapper.jar' if ignored).
       - name: Validate Gradle Wrapper
         uses: gradle/actions/wrapper-validation@v3
 
+      # Ensure execute permissions on the gradlew script
       - name: Grant Execute Permission to Gradle Wrapper
-        run: chmod +x gradlew || true
+        run: chmod +x gradlew
 
+      # Execute local JVM unit tests
       - name: Run Unit Tests
-        run: gradle :app:testDebugUnitTest
+        run: ./gradlew testDebugUnitTest --stacktrace
 
+      # Build debug APK package
       - name: Build Debug APK
-        run: gradle assembleDebug
+        run: ./gradlew assembleDebug --stacktrace
 
+      # Upload the generated APK artifact
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:

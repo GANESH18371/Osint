@@ -16,3 +16,9 @@
 local.properties
 .env
 debug.keystore
+
+# Explicitly ensure Gradle Wrapper binaries and scripts are NEVER ignored
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+!gradlew
+!gradlew.bat

@@ -626,10 +626,11 @@ on:
     branches: [ "main", "master" ]
   pull_request:
     branches: [ "main", "master" ]
+  workflow_dispatch:
 
 jobs:
   build:
-    name: Build Android APK
+    name: Build & Verify Android APK
     runs-on: ubuntu-latest
 
     steps:
@@ -643,78 +644,131 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew || true
+      # Validates Gradle Wrapper JAR checksum against official Gradle hashes.
+      # Requires gradle/wrapper/gradle-wrapper.jar to be tracked in git.
+      - name: Validate Gradle Wrapper
+        uses: gradle/actions/wrapper-validation@v3
 
+      # Grant executable permissions to the gradlew shell script
+      - name: Grant Execute Permission to Gradle Wrapper
+        run: chmod +x gradlew
+
+      # Execute local JVM unit tests
       - name: Run Unit Tests
-        run: gradle :app:testDebugUnitTest
+        run: ./gradlew testDebugUnitTest --stacktrace
 
+      # Build debug APK package
       - name: Build Debug APK
-        run: gradle assembleDebug
+        run: ./gradlew assembleDebug --stacktrace
 
+      # Upload the compiled APK artifact
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: BeaconLens-Debug-APK
           path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
     """.trimIndent()
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = DarkSurfaceElevated),
-        border = BorderStroke(1.dp, DarkSurfaceBorder)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        // Critical Gradle Wrapper Guide Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(14.dp),
+            colors = CardDefaults.cardColors(containerColor = DarkSurface),
+            border = BorderStroke(1.dp, CyberCyan.copy(alpha = 0.5f))
+        ) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Security,
+                        contentDescription = null,
+                        tint = SignalGreen,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "GITHUB ACTIONS CI/CD (.github/workflows/build.yml)",
+                        text = "GRADLE WRAPPER REPOSITORY REQUIREMENT",
                         style = MaterialTheme.typography.labelSmall,
-                        color = CyberCyan,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Automated compilation, unit test validation, and APK artifact generation",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextMuted
+                        fontWeight = FontWeight.Bold,
+                        color = SignalGreen
                     )
                 }
 
-                IconButton(
-                    onClick = {
-                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        val clip = ClipData.newPlainText("GitHub Actions Workflow", workflowCode)
-                        clipboard.setPrimaryClip(clip)
-                        onCopy()
-                    },
-                    modifier = Modifier
-                        .size(36.dp)
-                        .background(DarkSurface, RoundedCornerShape(8.dp))
-                ) {
-                    Icon(Icons.Default.ContentCopy, contentDescription = "Copy Workflow", tint = CyberCyan, modifier = Modifier.size(18.dp))
-                }
-            }
+                Spacer(modifier = Modifier.height(6.dp))
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(DarkSurface)
-                    .padding(12.dp)
-            ) {
                 Text(
-                    text = workflowCode,
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 11.sp,
-                    color = TextPrimary
+                    text = "To prevent '0 Gradle Wrapper JARs found' in GitHub Actions wrapper-validation, your git repository MUST track:\n" +
+                            "• gradlew (executable shell script)\n" +
+                            "• gradle/wrapper/gradle-wrapper.properties\n" +
+                            "• gradle/wrapper/gradle-wrapper.jar (binary JAR)\n\n" +
+                            "If your global git configuration ignores *.jar, force-add the wrapper jar:\n" +
+                            "git add -f gradle/wrapper/gradle-wrapper.jar",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary,
+                    fontSize = 11.sp
                 )
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = DarkSurfaceElevated),
+            border = BorderStroke(1.dp, DarkSurfaceBorder)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "GITHUB ACTIONS CI/CD (.github/workflows/build.yml)",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = CyberCyan,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Automated wrapper validation, test execution, and APK artifact upload",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextMuted
+                        )
+                    }
+
+                    IconButton(
+                        onClick = {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            val clip = ClipData.newPlainText("GitHub Actions Workflow", workflowCode)
+                            clipboard.setPrimaryClip(clip)
+                            onCopy()
+                        },
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(DarkSurface, RoundedCornerShape(8.dp))
+                    ) {
+                        Icon(Icons.Default.ContentCopy, contentDescription = "Copy Workflow", tint = CyberCyan, modifier = Modifier.size(18.dp))
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(DarkSurface)
+                        .padding(12.dp)
+                ) {
+                    Text(
+                        text = workflowCode,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 11.sp,
+                        color = TextPrimary
+                    )
+                }
             }
         }
     }
