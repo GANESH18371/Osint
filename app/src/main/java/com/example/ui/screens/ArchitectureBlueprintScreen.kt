@@ -633,6 +633,9 @@ jobs:
     name: Build & Verify Android APK
     runs-on: ubuntu-latest
 
+    env:
+      GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8"
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -645,7 +648,6 @@ jobs:
           cache: gradle
 
       # Validates Gradle Wrapper JAR checksum against official Gradle hashes.
-      # Requires gradle/wrapper/gradle-wrapper.jar to be tracked in git.
       - name: Validate Gradle Wrapper
         uses: gradle/actions/wrapper-validation@v3
 
@@ -656,6 +658,14 @@ jobs:
       # Execute local JVM unit tests
       - name: Run Unit Tests
         run: ./gradlew testDebugUnitTest --stacktrace
+
+      # Upload Test Reports if tests fail for easy debugging
+      - name: Upload Test Report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-reports
+          path: app/build/reports/tests/
 
       # Build debug APK package
       - name: Build Debug APK
